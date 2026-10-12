@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage — renewhunt</title>
+<meta name="description" content="Usage for renewhunt, the ACME renewal readiness scanner for 64-day Let's Encrypt certificates.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/docs/usage.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Usage — renewhunt">
+<meta property="og:description" content="ACME renewal readiness for Let's Encrypt 64-day certificates.">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/docs/usage.html">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Usage — renewhunt">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="board">
+  <div class="board-frame">
+    <div class="board-header">
+      <a href="../" style="color:inherit;text-decoration:none"><span>RENEWHUNT — DOCS</span></a>
+      <span class="bulb" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
+<section class="timetable">
+<div class="panel"><h2>Usage</h2>
+<p>Default command runs scan + clients + timers:</p>
+<pre class="cmd">renewhunt
+renewhunt scan [paths...]
+renewhunt scan -system          # also walk /etc/letsencrypt, cron, systemd
+renewhunt clients
+renewhunt timers
+renewhunt -json
+renewhunt scan -json ./deploy</pre>
+<p>Exit code <code>1</code> if any finding is <strong>BLOCKED</strong>; <code>0</code> otherwise; <code>2</code> on usage/errors.</p>
+<p>Example against the fixture corpus:</p>
+<pre class="cmd">renewhunt scan ./testdata
+# BLOCKED on --days 80, RENEW_DAYS=83, renewBefore: 2160h
+# RISKY on renewBefore: 720h, renew_before_expiry=60</pre>
+</div>
+<nav class="panel docs-nav">
+  <a href="./">Docs</a>
+  <a href="install.html">Install</a>
+  <a href="usage.html">Usage</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="reference.html">Reference</a>
+  <a href="faq.html">FAQ</a>
+  <a href="../">Home</a>
+</nav>
+</section>
+<footer class="board-foot"><p>MIT · <a href="https://github.com/Blackman99/renewhunt">GitHub</a></p></footer>
+</body>
+</html>

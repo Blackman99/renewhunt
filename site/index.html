@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>renewhunt — will your ACME renewal survive 64-day certs?</title>
+<meta name="description" content="Tell you, in one command, whether your ACME renewal setup will survive Let's Encrypt's move to 64-day (then 45-day) certificates.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="renewhunt — DEPARTURES">
+<meta property="og:description" content="Hunt hardcoded ACME renewal day windows before Let's Encrypt's 64-day certs land.">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="renewhunt — DEPARTURES">
+<meta name="twitter:description" content="Hunt hardcoded ACME renewal day windows before Let's Encrypt's 64-day certs land.">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="board" id="top">
+    <div class="board-frame" role="region" aria-label="Departure board">
+      <div class="board-header">
+        <h1 style="margin:0;font:inherit;color:inherit">RENEWHUNT — DEPARTURES</h1>
+        <span class="bulb" aria-hidden="true"></span>
+      </div>
+      <div class="rows" id="departures">
+        <div class="row" data-sev="late">
+          <span class="flap">DAYS 80</span>
+          <span class="dest">cron · certbot renew --days 80</span>
+          <span class="sig late">LATE</span>
+        </div>
+        <div class="row" data-sev="late">
+          <span class="flap">DAY 83</span>
+          <span class="dest">wrapper · RENEW_DAYS=83</span>
+          <span class="sig late">LATE</span>
+        </div>
+        <div class="row" data-sev="risky">
+          <span class="flap">720 H</span>
+          <span class="dest">cert-manager · renewBefore: 720h</span>
+          <span class="sig risky">RISKY</span>
+        </div>
+        <div class="row" data-sev="ready">
+          <span class="flap">≈ 43</span>
+          <span class="dest">⅔ of 64-day · percentage / ARI</span>
+          <span class="sig ready">READY</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section class="timetable">
+    <div class="panel">
+      <h2>01 · Why this board</h2>
+      <p class="lede">On 7 Oct 2026 Let's Encrypt announced <a href="https://letsencrypt.org/2026/10/07/64-day-certs">64-day certificates</a>. Staging starts <strong>14 Oct 2026</strong>; production <strong>10 Feb 2027</strong>; then 45-day. They told operators to grep for hardcoded <code>83</code>, <code>80</code>, or <code>60</code> in cron, wrappers, and runbooks. renewhunt runs that hunt, classifies each hit, checks ACME clients / ARI, and lists renew timers — read-only, one binary.</p>
+      <p class="meta">Not <a href="https://github.com/Blackman99/certfan">certfan</a> (live multi-IP TLS sameness). This audits <em>renewal automation config</em>.</p>
+    </div>
+    <div class="panel">
+      <h2>02 · Install</h2>
+      <pre class="cmd">go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
+# or grab a release binary for linux / darwin / windows</pre>
+      <p><a href="https://github.com/Blackman99/renewhunt/releases">Releases</a> · <a href="docs/">Docs</a> · <a href="https://github.com/Blackman99/renewhunt">Source</a></p>
+    </div>
+    <div class="panel">
+      <h2>03 · One departure</h2>
+      <pre class="cmd">$ renewhunt scan .
+SCAN  files=42 skipped=8 findings=3 worst=BLOCKED
+SEV      FILE:LINE                 MATCH        REASON
+BLOCKED  cron.d/certs:2           --days 80    past 64-day expiry…
+$ echo $?
+1</pre>
+      <p>Default <code>renewhunt</code> runs scan + clients + timers. Use <code>-json</code> in CI. Exit <code>1</code> on any <strong>BLOCKED</strong>.</p>
+      <p><img src="demo.gif" alt="CLI demo scanning fixtures and finding BLOCKED hits" width="720" loading="lazy"></p>
+    </div>
+    <div class="panel">
+      <h2>04 · Guidance</h2>
+      <p>Renew near <strong>⅔ of lifetime</strong> (≈ day 43 for 64-day). Prefer ARI (Certbot 4.1+) or percentage-based windows (<code>renewBeforePercentage</code>) over absolute day counts copied from the 90-day era.</p>
+      <nav class="docs-nav">
+        <a href="docs/">Docs home</a>
+        <a href="docs/install.html">Install</a>
+        <a href="docs/usage.html">Usage</a>
+        <a href="docs/configuration.html">Configuration</a>
+        <a href="docs/reference.html">Reference</a>
+        <a href="docs/faq.html">FAQ</a>
+      </nav>
+    </div>
+  </section>
+
+  <footer class="board-foot">
+    <p>MIT · <a href="https://github.com/Blackman99/renewhunt">Blackman99/renewhunt</a> · design: Solari split-flap departure board · <a href="DESIGN.md">DESIGN.md</a></p>
+  </footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

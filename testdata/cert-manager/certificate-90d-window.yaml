@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-too-long
+spec:
+  secretName: example-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - example.com
+  # BLOCKED: 2160h = 90 days absolute — longer than 64-day lifetime
+  renewBefore: 2160h

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install — renewhunt</title>
+<meta name="description" content="Install for renewhunt, the ACME renewal readiness scanner for 64-day Let's Encrypt certificates.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/docs/install.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Install — renewhunt">
+<meta property="og:description" content="ACME renewal readiness for Let's Encrypt 64-day certificates.">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/docs/install.html">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Install — renewhunt">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="board">
+  <div class="board-frame">
+    <div class="board-header">
+      <a href="../" style="color:inherit;text-decoration:none"><span>RENEWHUNT — DOCS</span></a>
+      <span class="bulb" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
+<section class="timetable">
+<div class="panel"><h2>Install</h2>
+<p>Requires Go 1.22+ for <code>go install</code>, or download a static binary (CGO disabled) from Releases.</p>
+<pre class="cmd">go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
+renewhunt -version</pre>
+<p>Release assets cover linux / darwin / windows × amd64 / arm64 via GoReleaser.</p>
+<pre class="cmd"># example
+curl -sL https://github.com/Blackman99/renewhunt/releases/download/v0.1.0/renewhunt_0.1.0_linux_amd64.tar.gz | tar xz
+./renewhunt -version</pre>
+</div>
+<nav class="panel docs-nav">
+  <a href="./">Docs</a>
+  <a href="install.html">Install</a>
+  <a href="usage.html">Usage</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="reference.html">Reference</a>
+  <a href="faq.html">FAQ</a>
+  <a href="../">Home</a>
+</nav>
+</section>
+<footer class="board-foot"><p>MIT · <a href="https://github.com/Blackman99/renewhunt">GitHub</a></p></footer>
+</body>
+</html>

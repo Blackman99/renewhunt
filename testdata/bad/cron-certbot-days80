@@ -1,0 +1,2 @@
+# BAD: hardcoded --days 80 (LE asked people to grep for 80/83)
+0 3 * * * root certbot renew --days 80 --quiet

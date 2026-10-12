@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — renewhunt</title>
+<meta name="description" content="FAQ for renewhunt, the ACME renewal readiness scanner for 64-day Let's Encrypt certificates.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/docs/faq.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FAQ — renewhunt">
+<meta property="og:description" content="ACME renewal readiness for Let's Encrypt 64-day certificates.">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/docs/faq.html">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="FAQ — renewhunt">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="board">
+  <div class="board-frame">
+    <div class="board-header">
+      <a href="../" style="color:inherit;text-decoration:none"><span>RENEWHUNT — DOCS</span></a>
+      <span class="bulb" aria-hidden="true"></span>
+    </div>
+  </div>
+</main>
+<section class="timetable">
+<div class="panel"><h2>FAQ</h2>
+<p><strong>Does renewhunt renew my certificates?</strong> No. Read-only audit of configs and schedulers.</p>
+<p><strong>How is this different from certfan?</strong> certfan checks whether every IP behind a hostname serves the same live certificate. renewhunt checks whether your <em>renewal automation</em> still makes sense when lifetimes shrink.</p>
+<p><strong>Will percentage-based cert-manager config be flagged?</strong> <code>renewBeforePercentage</code> is not treated as a hardcoded day window. Absolute <code>renewBefore: 720h</code> is RISKY; <code>2160h</code> is BLOCKED.</p>
+<p><strong>Do I need root?</strong> Only for <code>-system</code> paths you cannot read as a normal user. Scanning a repo copy of your configs works without root.</p>
+<p><strong>Live expiry probes?</strong> Roadmap v0.2 (<code>--check-live</code>). ARI endpoint probe is v0.3.</p>
+</div>
+<nav class="panel docs-nav">
+  <a href="./">Docs</a>
+  <a href="install.html">Install</a>
+  <a href="usage.html">Usage</a>
+  <a href="configuration.html">Configuration</a>
+  <a href="reference.html">Reference</a>
+  <a href="faq.html">FAQ</a>
+  <a href="../">Home</a>
+</nav>
+</section>
+<footer class="board-foot"><p>MIT · <a href="https://github.com/Blackman99/renewhunt">GitHub</a></p></footer>
+</body>
+</html>

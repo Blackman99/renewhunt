@@ -1,0 +1,6 @@
+/renewhunt
+/dist/
+*.exe
+*.test
+.DS_Store
+/renewhunt

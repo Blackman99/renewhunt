@@ -1,0 +1,13 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: example-com-pct
+spec:
+  secretName: example-com-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - example.com
+  # GOOD: percentage-based — scales with lifetime
+  renewBeforePercentage: 33

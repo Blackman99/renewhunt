@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="renewhunt">
+  <rect x="48" y="96" width="416" height="320" fill="#1c2229"/>
+  <rect x="64" y="112" width="384" height="288" fill="#6a4e3b"/>
+  <rect x="80" y="128" width="352" height="256" fill="#efe6d4"/>
+  <!-- flap split line -->
+  <rect x="80" y="252" width="352" height="8" fill="#1c2229" opacity="0.35"/>
+  <text x="256" y="300" text-anchor="middle" font-family="Arial Narrow, Helvetica Condensed, sans-serif" font-weight="700" font-size="200" fill="#1c2229" letter-spacing="-4">43</text>
+</svg>
