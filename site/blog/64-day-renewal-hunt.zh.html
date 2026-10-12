@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在 64 天证书到来前，揪出 90 天时代的续期假设 — renewhunt</title>
+<meta name="description" content="renewhunt 如何找出并评级在 Let's Encrypt 64 天 / 45 天证书下会失效的写死续期窗口。">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.zh.html">
+<link rel="alternate" hreflang="en" href="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在 64 天证书到来前，揪出 90 天时代的续期假设">
+<meta property="og:description" content="renewhunt 如何找出并评级在 Let's Encrypt 64 天 / 45 天证书下会失效的写死续期窗口。">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.zh.html">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="在 64 天证书到来前，揪出 90 天时代的续期假设">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="board">
+  <div class="board-frame">
+    <div class="board-header">
+      <a href="../" style="color:inherit;text-decoration:none"><span>RENEWHUNT — 博客</span></a>
+      <span class="bulb" aria-hidden="true"></span>
+    </div>
+    <div class="rows static">
+      <div class="row in"><span class="flap">DAYS 80</span><span class="dest">certbot renew --days 80</span><span class="sig late">BLOCKED</span></div>
+      <div class="row in"><span class="flap">720 H</span><span class="dest">cert-manager · renewBefore: 720h</span><span class="sig risky">RISKY</span></div>
+      <div class="row in"><span class="flap">504 H</span><span class="dest">cert-manager · renewBefore: 504h</span><span class="sig ready">OK</span></div>
+    </div>
+  </div>
+</main>
+<section class="timetable">
+<article class="panel post">
+<h2>在 64 天证书到来前，揪出 90 天时代的续期假设</h2>
+<p class="meta">2026-10-12 · renewhunt v0.1.0</p>
+<p class="lede">2026 年 10 月 7 日，Let's Encrypt <a href="https://letsencrypt.org/2026/10/07/64-day-certs">宣布 64 天证书</a>：2026 年 10 月 14 日起在 staging 环境启用，2027 年 2 月 10 日起进入生产，之后还会缩短到 45 天。官方给运维的建议很直接：在 cron、包装脚本和运维手册里 grep 83、80、60 这类写死的数字。renewhunt 是一个只读的 Go 命令行工具，帮你带上下文地做这次 grep，并告诉你哪些命中真的会出问题。</p>
+
+<h3>为什么单纯 grep 不够</h3>
+<p>一是噪音：在配置目录里 <code>grep -rn 80</code>，满屏都是端口号、百分比和行宽。二是语义：<code>certbot renew --days 80</code> 的意思是"到期前 80 天"，而"证书满 80 天就续期"的脚本是"签发后第 80 天"。renewhunt 区分这两类，并按 64 天寿命逐条评级（同时标出在 45 天下会变紧的配置）。</p>
+
+<h3>扫描器如何工作</h3>
+<p><code>scan</code> 包遍历你给的路径（默认 <code>.</code>），跳过 <code>.git</code>、<code>node_modules</code>、<code>vendor</code>、构建产物等目录。它只读看起来像配置或脚本的文件：shell、YAML/TOML/JSON、HCL、systemd unit 与 timer、crontab、Dockerfile/Makefile，以及文件名含 <code>renew</code>、<code>acme</code>、<code>cert</code> 的无扩展名文件。二进制或非 UTF-8 文件跳过并计数，单文件最多读 2&nbsp;MiB，以 <code>#</code> 或 <code>//</code> 开头的注释行忽略。</p>
+<p>每一行分两轮匹配：</p>
+<ol>
+<li><strong>结构化模式</strong>：正则匹配 <code>renew_before_expiry = N</code>、<code>RENEW_DAYS=N</code>、cert-manager 的 <code>renewBefore: Nh</code> / <code>Nd</code>、<code>--days N</code>（及 <code>--days-until-expiry</code>、<code>--renew-before-expiry</code>）、<code>certbot renew … --days N</code>、<code>renewal_window = N</code>。</li>
+<li><strong>裸数字</strong>：独立出现的 <code>83</code>、<code>80</code>、<code>60</code>、<code>30</code>，但仅当同一行还出现 <code>renew</code>、<code>certbot</code>、<code>acme</code>、<code>letsencrypt</code>、<code>tls</code>、<code>cert-manager</code>、<code>lego</code>、<code>caddy</code>、<code>traefik</code>、<code>fullchain</code> 等上下文词。正是这道上下文闸门让 <code>listen 80</code> 不会出现在报告里。</li>
+</ol>
+<p>同一行上重叠的命中会去重，保留更长、更具体的那个。</p>
+
+<h3>评级规则</h3>
+<p>"到期前 N 天"类数值的阈值直接来自代码：</p>
+<table>
+<tr><th>窗口</th><th>级别</th><th>原因</th></tr>
+<tr><td>≥ 64 天</td><td>BLOCKED</td><td>64 天证书剩余寿命不可能这么长，条件失去意义。</td></tr>
+<tr><td>45–63</td><td>RISKY</td><td>64 天下几乎签发即续；45 天下直接失效。</td></tr>
+<tr><td>31–44</td><td>RISKY</td><td>绝对窗口偏大，45 天下余量很紧。</td></tr>
+<tr><td>14–30</td><td>OK</td><td>符合 ⅔ 寿命建议（64 天证书约到期前 21 天）。</td></tr>
+<tr><td>7–13</td><td>INFO</td><td>请对照你的 CA 证书寿命确认。</td></tr>
+<tr><td>&lt; 7</td><td>RISKY</td><td>安全余量太薄。</td></tr>
+</table>
+<p>cert-manager 以小时表示的 <code>renewBefore</code> 会换算成天：≥60 天 BLOCKED，≥45 天 RISKY，&gt;21 天 RISKY（绝对窗口），否则 OK。"签发后第 N 天"的裸数字：83、80 为 BLOCKED（超过 64 天寿命），60 为 RISKY（只剩约 4 天余量），30 为 INFO。<code>renewBeforePercentage</code> 刻意不报——百分比会随寿命缩放，正是推荐做法。</p>
+
+<h3>在测试样例上运行</h3>
+<p>仓库自带 <code>testdata/</code> 样例集，CI 也用它做端到端测试。以下是 v0.1.0 的真实输出（路径缩短、原因省略）：</p>
+<pre class="cmd">$ renewhunt scan ./testdata
+SCAN  files=8 skipped=0 findings=7 worst=BLOCKED
+BLOCKED  bad/cron-certbot-days80:2          certbot renew --days 80
+BLOCKED  bad/renew-script.sh:3              RENEW_DAYS=83
+RISKY    bad/renew-script.sh:8              renew_before_expiry=60
+BLOCKED  bad/wrapper.conf:2                 renew-before-expiry = 80
+RISKY    cert-manager/certificate-720h.yaml:13        renewBefore: 720h
+BLOCKED  cert-manager/certificate-90d-window.yaml:13  renewBefore: 2160h
+OK       good/renew-21d.yaml:2              renewBefore: 504h
+$ echo $?
+1</pre>
+<p>只要有 BLOCKED，退出码就是 <code>1</code>；用法错误为 <code>2</code>；其余为 <code>0</code>。所以 <code>renewhunt scan ./deploy</code> 可以直接当 CI 闸门用；加 <code>-json</code> 可得到包含路径、行、列、匹配、级别、原因和建议的结构化结果。</p>
+
+<h3>客户端与定时器</h3>
+<p>不带子命令运行 <code>renewhunt</code> 时，还会探测 <code>PATH</code> 上的 ACME 客户端（<code>certbot --version</code>、acme.sh、lego，以及通过 kubectl 探测 cert-manager）并给出提示，例如 certbot 低于 4.1 会建议升级以使用 ARI（ACME Renewal Information）。随后列出提到 certbot/acme/letsencrypt 的 systemd timer 和 cron 行，让你看到续期<em>实际</em>何时运行。<code>-system</code> 会把扫描扩展到 <code>/etc/letsencrypt</code>、<code>/etc/cron.*</code>、systemd unit 目录、<code>/root/.acme.sh</code> 和 <code>/home</code>。</p>
+
+<h3>它不做什么</h3>
+<p>renewhunt 不续期证书、不修改文件，扫描时不联网，也不检查线上端点（多 IP TLS 一致性请看 <a href="https://github.com/Blackman99/certfan">certfan</a>）。线上到期探测和 cert-manager <code>renewBeforePercentage</code> 建议计划在 v0.2，ARI 端点探测在 v0.3（见 <a href="https://github.com/Blackman99/renewhunt/blob/main/ROADMAP.md">ROADMAP</a>）。</p>
+
+<h3>试试看</h3>
+<pre class="cmd">go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
+renewhunt scan /path/to/your/infra-repo</pre>
+<p>遇到误报或漏报？带上那一行开个 issue，它会变成 <code>testdata/</code> 里的新样例。</p>
+</article>
+<nav class="panel docs-nav">
+  <a href="./">Blog</a><a href="64-day-renewal-hunt.html">English</a><a href="../docs/">Docs</a><a href="../">Home</a><a href="https://github.com/Blackman99/renewhunt">GitHub</a>
+</nav>
+</section>
+<footer class="board-foot"><p>MIT · <a href="https://github.com/Blackman99/renewhunt">Blackman99/renewhunt</a></p></footer>
+</body>
+</html>

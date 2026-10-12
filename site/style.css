@@ -140,3 +140,13 @@ footer.board-foot{
   .flap{transition:none;transform:none;opacity:1}
   .row .flap{transform:none;opacity:1}
 }
+
+/* blog */
+.post{max-width:46rem}
+.post h3{font-family:'Saira Extra Condensed',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--amber);font-size:1.3rem;margin:1.4rem 0 .4rem}
+.post li{margin:.25rem 0}
+.post table{border-collapse:collapse;width:100%;font-size:.95rem;margin:.6rem 0}
+.post th,.post td{border:1px solid var(--copper);padding:.35rem .55rem;text-align:left;vertical-align:top}
+.post th{font-family:'Saira Extra Condensed',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--amber)}
+.rows.static .flap{transform:none;opacity:1}
+:lang(zh) body,body:lang(zh){font-family:Newsreader,"Noto Serif SC","Source Han Serif SC","Songti SC",serif}

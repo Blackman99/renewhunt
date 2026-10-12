@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hunting 90-day assumptions before 64-day certificates arrive — renewhunt</title>
+<meta name="description" content="How renewhunt finds and grades hardcoded ACME renewal windows that break under Let's Encrypt 64-day and 45-day certificates.">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.html">
+<link rel="alternate" hreflang="zh" href="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.zh.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hunting 90-day assumptions before 64-day certificates arrive">
+<meta property="og:description" content="How renewhunt finds and grades hardcoded ACME renewal windows that break under Let's Encrypt 64-day and 45-day certificates.">
+<meta property="og:url" content="https://blackman99.github.io/renewhunt/blog/64-day-renewal-hunt.html">
+<meta property="og:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hunting 90-day assumptions before 64-day certificates arrive">
+<meta name="twitter:image" content="https://blackman99.github.io/renewhunt/og-image.png">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main class="board">
+  <div class="board-frame">
+    <div class="board-header">
+      <a href="../" style="color:inherit;text-decoration:none"><span>RENEWHUNT — BLOG</span></a>
+      <span class="bulb" aria-hidden="true"></span>
+    </div>
+    <div class="rows static">
+      <div class="row in"><span class="flap">DAYS 80</span><span class="dest">certbot renew --days 80</span><span class="sig late">BLOCKED</span></div>
+      <div class="row in"><span class="flap">720 H</span><span class="dest">cert-manager · renewBefore: 720h</span><span class="sig risky">RISKY</span></div>
+      <div class="row in"><span class="flap">504 H</span><span class="dest">cert-manager · renewBefore: 504h</span><span class="sig ready">OK</span></div>
+    </div>
+  </div>
+</main>
+<section class="timetable">
+<article class="panel post">
+<h2>Hunting 90-day assumptions before 64-day certificates arrive</h2>
+<p class="meta">2026-10-12 · renewhunt v0.1.0</p>
+<p class="lede">On 7 October 2026 Let's Encrypt <a href="https://letsencrypt.org/2026/10/07/64-day-certs">announced 64-day certificates</a>: staging from 14 October 2026, production from 10 February 2027, with 45-day certificates to follow. Their advice to operators was blunt: grep for hardcoded numbers like 83, 80 or 60 in cron jobs, wrapper scripts and runbooks. renewhunt is a small, read-only Go CLI that does that grep with context, and tells you which hits will actually break.</p>
+
+<h3>Why a plain grep is not enough</h3>
+<p>Two problems. First, <code>grep -rn 80</code> on a config tree drowns you in ports, percentages and line widths. Second, the same number means different things: <code>certbot renew --days 80</code> is "days before expiry", while a wrapper that renews when a cert is 80 days old is "days since issuance". renewhunt separates these cases and grades each one against a 64-day lifetime (and flags what gets tight at 45).</p>
+
+<h3>How the scanner works</h3>
+<p>The <code>scan</code> package walks the paths you give it (or <code>.</code>), skipping <code>.git</code>, <code>node_modules</code>, <code>vendor</code>, build output and similar. It only reads files that look like config or scripts: shell, YAML/TOML/JSON, HCL, systemd units and timers, crontabs, Dockerfiles/Makefiles, plus extension-less files whose name contains <code>renew</code>, <code>acme</code> or <code>cert</code>. Binary or non-UTF-8 files are skipped and counted; files are capped at 2&nbsp;MiB. Comment lines (<code>#</code>, <code>//</code>) are ignored.</p>
+<p>Each line is then checked in two passes:</p>
+<ol>
+<li><strong>Structured patterns</strong> — regexes for <code>renew_before_expiry = N</code>, <code>RENEW_DAYS=N</code>, cert-manager <code>renewBefore: Nh</code> / <code>Nd</code>, <code>--days N</code> (and <code>--days-until-expiry</code>, <code>--renew-before-expiry</code>), <code>certbot renew … --days N</code>, and <code>renewal_window = N</code>.</li>
+<li><strong>Bare Let's Encrypt numbers</strong> — <code>83</code>, <code>80</code>, <code>60</code>, <code>30</code> as standalone numbers, but only on lines that also mention something like <code>renew</code>, <code>certbot</code>, <code>acme</code>, <code>letsencrypt</code>, <code>tls</code>, <code>cert-manager</code>, <code>lego</code>, <code>caddy</code>, <code>traefik</code> or <code>fullchain</code>. That context gate is what keeps <code>listen 80</code> out of your report.</li>
+</ol>
+<p>Overlapping hits on the same line are deduplicated, keeping the longer (more specific) match.</p>
+
+<h3>The grading rules</h3>
+<p>For "days before expiry" values the thresholds are taken straight from the code:</p>
+<table>
+<tr><th>Window</th><th>Severity</th><th>Why</th></tr>
+<tr><td>≥ 64 days</td><td>BLOCKED</td><td>A 64-day cert never has that much life left; the condition is always true or never meaningful.</td></tr>
+<tr><td>45–63</td><td>RISKY</td><td>Renews almost immediately on 64-day; breaks under 45-day.</td></tr>
+<tr><td>31–44</td><td>RISKY</td><td>Large absolute window; tight under 45-day.</td></tr>
+<tr><td>14–30</td><td>OK</td><td>Fits the ⅔ guidance (≈21 days before expiry on 64-day).</td></tr>
+<tr><td>7–13</td><td>INFO</td><td>Verify against your CA's lifetime.</td></tr>
+<tr><td>&lt; 7</td><td>RISKY</td><td>Thin safety margin.</td></tr>
+</table>
+<p>cert-manager <code>renewBefore</code> in hours is converted to days: ≥60 days BLOCKED, ≥45 RISKY, &gt;21 RISKY (absolute window), otherwise OK. Bare day-since-issuance numbers: 83 and 80 are BLOCKED (past a 64-day expiry), 60 is RISKY (~4 days margin), 30 is INFO. <code>renewBeforePercentage</code> is deliberately not flagged — a percentage scales with the lifetime, which is exactly what you want.</p>
+
+<h3>Running it on the fixtures</h3>
+<p>The repository ships a fixture corpus in <code>testdata/</code>, also used by CI. This is real output from v0.1.0 (paths shortened, reasons cut):</p>
+<pre class="cmd">$ renewhunt scan ./testdata
+SCAN  files=8 skipped=0 findings=7 worst=BLOCKED
+BLOCKED  bad/cron-certbot-days80:2          certbot renew --days 80
+BLOCKED  bad/renew-script.sh:3              RENEW_DAYS=83
+RISKY    bad/renew-script.sh:8              renew_before_expiry=60
+BLOCKED  bad/wrapper.conf:2                 renew-before-expiry = 80
+RISKY    cert-manager/certificate-720h.yaml:13        renewBefore: 720h
+BLOCKED  cert-manager/certificate-90d-window.yaml:13  renewBefore: 2160h
+OK       good/renew-21d.yaml:2              renewBefore: 504h
+$ echo $?
+1</pre>
+<p>The exit code is <code>1</code> whenever any finding is BLOCKED, <code>2</code> on usage errors, <code>0</code> otherwise — so <code>renewhunt scan ./deploy</code> works as a CI gate as-is, and <code>-json</code> gives you machine-readable findings with path, line, column, match, severity, reason and hint.</p>
+
+<h3>Clients and timers</h3>
+<p>Running <code>renewhunt</code> with no subcommand also probes ACME clients on <code>PATH</code> (<code>certbot --version</code>, acme.sh, lego, and cert-manager via kubectl) and adds notes — e.g. certbot below 4.1 gets a suggestion to upgrade for ARI (ACME Renewal Information). It then lists systemd timers and cron lines that mention certbot/acme/letsencrypt, so you can see <em>when</em> renewal actually runs. <code>-system</code> extends the scan to <code>/etc/letsencrypt</code>, <code>/etc/cron.*</code>, systemd unit dirs, <code>/root/.acme.sh</code> and <code>/home</code>.</p>
+
+<h3>What it does not do</h3>
+<p>renewhunt never renews certificates, never edits files and makes no network calls during a scan. It does not check live endpoints (see <a href="https://github.com/Blackman99/certfan">certfan</a> for multi-IP TLS consistency). A live expiry probe and a cert-manager <code>renewBeforePercentage</code> suggestion are planned for v0.2; an ARI endpoint probe for v0.3 (<a href="https://github.com/Blackman99/renewhunt/blob/main/ROADMAP.md">ROADMAP</a>).</p>
+
+<h3>Try it</h3>
+<pre class="cmd">go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
+renewhunt scan /path/to/your/infra-repo</pre>
+<p>False positive or missed pattern? Open an issue with the line — it becomes a fixture in <code>testdata/</code>.</p>
+</article>
+<nav class="panel docs-nav">
+  <a href="./">Blog</a><a href="64-day-renewal-hunt.zh.html">中文版</a><a href="../docs/">Docs</a><a href="../">Home</a><a href="https://github.com/Blackman99/renewhunt">GitHub</a>
+</nav>
+</section>
+<footer class="board-foot"><p>MIT · <a href="https://github.com/Blackman99/renewhunt">Blackman99/renewhunt</a></p></footer>
+</body>
+</html>
