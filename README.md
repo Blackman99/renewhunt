@@ -15,6 +15,7 @@ Landing: https://blackman99.github.io/renewhunt/ · Docs: https://blackman99.git
 ## Install
 
 ```bash
+brew install Blackman99/tap/renewhunt   # macOS / Linux (Homebrew)
 go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
 ```
 

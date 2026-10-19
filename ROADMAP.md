@@ -17,7 +17,7 @@
 
 ## v0.2.x
 
-- Homebrew formula (needs a `Blackman99/homebrew-tap` repo and a tap token for GoReleaser)
+- ✅ Homebrew formula — `brew install Blackman99/tap/renewhunt`, auto-updated on each release
 
 ## v0.3
 

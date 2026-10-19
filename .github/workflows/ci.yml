@@ -21,3 +21,8 @@ jobs:
         with: {go-version-file: go.mod}
       - run: go build -o renewhunt ./cmd/renewhunt
       - run: ./test/e2e.sh
+      - name: Homebrew formula renders
+        run: |
+          for a in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do printf "%064d  renewhunt_9.9.9_%s.tar.gz\n" 0 "$a"; done > /tmp/sums
+          scripts/brew-formula.sh v9.9.9 /tmp/sums > /tmp/renewhunt.rb
+          ruby -c /tmp/renewhunt.rb

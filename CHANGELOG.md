@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Homebrew install: `brew install Blackman99/tap/renewhunt` (macOS and Linux, amd64/arm64). Each release now updates `Formula/renewhunt.rb` in [Blackman99/homebrew-tap](https://github.com/Blackman99/homebrew-tap) automatically.
+
 ## v0.2.0 — 2026-10-19
 
 ### Added

@@ -28,12 +28,16 @@
 </main>
 <section class="timetable">
 <div class="panel"><h2>Install</h2>
-<p>Requires Go 1.22+ for <code>go install</code>, or download a static binary (CGO disabled) from Releases.</p>
+<p><strong>Homebrew</strong> (macOS / Linux, amd64 + arm64):</p>
+<pre class="cmd">brew install Blackman99/tap/renewhunt
+brew upgrade renewhunt   # after a new release</pre>
+<p>The formula lives in <a href="https://github.com/Blackman99/homebrew-tap">Blackman99/homebrew-tap</a> and is updated automatically on every release.</p>
+<p>Or with Go 1.22+ via <code>go install</code>, or download a static binary (CGO disabled) from Releases.</p>
 <pre class="cmd">go install github.com/Blackman99/renewhunt/cmd/renewhunt@latest
 renewhunt -version</pre>
 <p>Release assets cover linux / darwin / windows × amd64 / arm64 via GoReleaser.</p>
 <pre class="cmd"># example
-curl -sL https://github.com/Blackman99/renewhunt/releases/download/v0.1.0/renewhunt_0.1.0_linux_amd64.tar.gz | tar xz
+curl -sL https://github.com/Blackman99/renewhunt/releases/download/v0.2.0/renewhunt_0.2.0_linux_amd64.tar.gz | tar xz
 ./renewhunt -version</pre>
 </div>
 <nav class="panel docs-nav">
