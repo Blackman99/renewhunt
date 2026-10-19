@@ -32,6 +32,8 @@
 <pre class="cmd">renewhunt
 renewhunt scan [paths...]
 renewhunt scan -system          # also walk /etc/letsencrypt, cron, systemd
+renewhunt live example.com api.example.com:8443
+renewhunt -check-live example.com,api.example.com ./deploy
 renewhunt clients
 renewhunt timers
 renewhunt -json
@@ -40,7 +42,10 @@ renewhunt scan -json ./deploy</pre>
 <p>Example against the fixture corpus:</p>
 <pre class="cmd">renewhunt scan ./testdata
 # BLOCKED on --days 80, RENEW_DAYS=83, renewBefore: 2160h
-# RISKY on renewBefore: 720h, renew_before_expiry=60</pre>
+# RISKY on renewBefore: 720h, renew_before_expiry=60
+#   fix: renewBeforePercentage: 33   (printed under each cert-manager hit)</pre>
+<h3>Live probe</h3>
+<p><code>renewhunt live host[:port]…</code> opens a TLS connection to each host you name (port 443 by default), reads the served leaf certificate, and reports lifetime, how much of it is used, days left, and issuer. A certificate still being served well past ⅔ of its lifetime means renewal is late, failing, or not reloaded by the server. Use <code>-timeout</code> to change the per-host timeout (default 10s). On the default command, <code>-check-live a.example,b.example</code> adds the same section to the combined report.</p>
 </div>
 <nav class="panel docs-nav">
   <a href="./">Docs</a>

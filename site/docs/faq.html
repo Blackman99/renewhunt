@@ -30,9 +30,9 @@
 <div class="panel"><h2>FAQ</h2>
 <p><strong>Does renewhunt renew my certificates?</strong> No. Read-only audit of configs and schedulers.</p>
 <p><strong>How is this different from certfan?</strong> certfan checks whether every IP behind a hostname serves the same live certificate. renewhunt checks whether your <em>renewal automation</em> still makes sense when lifetimes shrink.</p>
-<p><strong>Will percentage-based cert-manager config be flagged?</strong> <code>renewBeforePercentage</code> is not treated as a hardcoded day window. Absolute <code>renewBefore: 720h</code> is RISKY; <code>2160h</code> is BLOCKED.</p>
+<p><strong>Will percentage-based cert-manager config be flagged?</strong> <code>renewBeforePercentage</code> scales with lifetime, so 15–50 is OK; only extreme values are flagged. Absolute <code>renewBefore: 720h</code> is RISKY and <code>2160h</code> is BLOCKED, each with a suggested <code>renewBeforePercentage: 33</code> replacement.</p>
 <p><strong>Do I need root?</strong> Only for <code>-system</code> paths you cannot read as a normal user. Scanning a repo copy of your configs works without root.</p>
-<p><strong>Live expiry probes?</strong> Roadmap v0.2 (<code>--check-live</code>). ARI endpoint probe is v0.3.</p>
+<p><strong>Live expiry probes?</strong> Yes, since v0.2: <code>renewhunt live host…</code> or <code>-check-live</code> on the default run. It is a single TLS connection per host to read dates and renewal timing; for checking that every IP behind a name serves the same cert, use certfan. ARI endpoint probe is v0.3.</p>
 </div>
 <nav class="panel docs-nav">
   <a href="./">Docs</a>

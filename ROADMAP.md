@@ -9,11 +9,15 @@
 - Human table + `--json`
 - Fixture corpus under `testdata/` + unit tests + CI e2e
 
-## v0.2
+## v0.2 (shipped 2026-10-19)
 
-- Live expiry probe (`--check-live`) for hosts you name
-- Suggest `renewBeforePercentage` for cert-manager Certificate resources
-- Homebrew formula
+- `renewhunt live host…` and `-check-live` — live expiry / renewal-timing probe for hosts you name
+- Suggest `renewBeforePercentage: 33` for cert-manager `renewBefore` hits; classify existing `renewBeforePercentage`
+- Parse cert-manager Go durations (`720h0m0s`, `43200m`, quoted values)
+
+## v0.2.x
+
+- Homebrew formula (needs a `Blackman99/homebrew-tap` repo and a tap token for GoReleaser)
 
 ## v0.3
 

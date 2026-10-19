@@ -35,11 +35,24 @@
 <li><strong>OK</strong> — absolute window within short-lifetime margins (e.g. ~14–30d before expiry)</li>
 <li><strong>INFO</strong> — day 30 or other context worth a human look</li>
 </ul>
-<h3>Patterns (v0.1)</h3>
+<h3>Live probe severity</h3>
+<ul>
+<li><strong>BLOCKED</strong> — expired, under 7 days left, or no TLS handshake</li>
+<li><strong>RISKY</strong> — over 80% of lifetime used (past the ⅔ renewal point), not yet valid, or a chain that does not verify</li>
+<li><strong>OK</strong> — already on a 64-day or shorter certificate and renewing on time</li>
+<li><strong>INFO</strong> — 90-day or longer certificate that is fine today</li>
+</ul>
+<h3>cert-manager</h3>
+<ul>
+<li><code>renewBefore</code> accepts Go durations: <code>720h</code>, <code>720h0m0s</code> (kubectl export form), <code>43200m</code>, <code>"2160h"</code></li>
+<li>Every RISKY/BLOCKED <code>renewBefore</code> carries a <code>suggestion</code>: <code>renewBeforePercentage: 33</code> (cert-manager ≥ v1.16), or delete <code>renewBefore</code> to use the ⅓-lifetime default</li>
+<li><code>renewBeforePercentage</code>: 15–50 OK; under 15 RISKY (too little room to retry on 45-day); over 50 INFO (renews early); outside (0,100) BLOCKED</li>
+</ul>
+<h3>Patterns</h3>
 <ul>
 <li><code>renew-before-expiry</code> / <code>renew_before_expiry</code> / <code>RENEW_DAYS</code></li>
 <li><code>--days N</code> on certbot renew lines</li>
-<li><code>renewBefore: Nh</code> / <code>Nd</code> (cert-manager style)</li>
+<li><code>renewBefore: &lt;duration&gt;</code> and <code>renewBeforePercentage: N</code> (cert-manager)</li>
 <li>Standalone <code>83</code>, <code>80</code>, <code>60</code>, <code>30</code> on lines that mention renew/cert/acme/letsencrypt/…</li>
 </ul>
 <p>Guidance: renew near ⅔ lifetime (≈ day 43 for 64-day). Prefer ARI or percentage-based windows.</p>

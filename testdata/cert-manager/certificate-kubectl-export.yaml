@@ -1,0 +1,15 @@
+# Shape you get from `kubectl get certificate -o yaml`: durations are
+# normalised to Go's 720h0m0s form, which v0.1 missed.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-example-com
+spec:
+  secretName: api-example-com-tls
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - api.example.com
+  duration: 2160h0m0s
+  renewBefore: 720h0m0s

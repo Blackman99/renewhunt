@@ -44,6 +44,11 @@
           <span class="sig risky">RISKY</span>
         </div>
         <div class="row" data-sev="ready">
+          <span class="flap">LIVE 31%</span>
+          <span class="dest">renewhunt live · 64d cert, 44d left</span>
+          <span class="sig ready">READY</span>
+        </div>
+        <div class="row" data-sev="ready">
           <span class="flap">≈ 43</span>
           <span class="dest">⅔ of 64-day · percentage / ARI</span>
           <span class="sig ready">READY</span>
@@ -76,7 +81,16 @@ $ echo $?
       <p><img src="demo.gif" alt="CLI demo scanning fixtures and finding BLOCKED hits" width="720" loading="lazy"></p>
     </div>
     <div class="panel">
-      <h2>04 · Guidance</h2>
+      <h2>04 · Arrivals check</h2>
+      <pre class="cmd">$ renewhunt live example.com api.example.com:8443
+LIVE  hosts=2 worst=RISKY
+SEV    HOST                  LIFETIME  USED  LEFT   ISSUER         REASON
+OK     example.com           64d       31%   44.1d  Let's Encrypt  already on a 64-day-class certificate…
+RISKY  api.example.com:8443  90d       84%   14.4d  Let's Encrypt  past the ⅔ renewal point and still served…</pre>
+      <p>Config can look right while the server still serves a stale cert. <code>renewhunt live</code> (or <code>-check-live host,…</code> on the default run) reads each served leaf and checks lifetime, age, and whether renewal is landing near ⅔. It only talks to the hosts you name, never to a CA.</p>
+    </div>
+    <div class="panel">
+      <h2>05 · Guidance</h2>
       <p>Renew near <strong>⅔ of lifetime</strong> (≈ day 43 for 64-day). Prefer ARI (Certbot 4.1+) or percentage-based windows (<code>renewBeforePercentage</code>) over absolute day counts copied from the 90-day era.</p>
       <nav class="docs-nav">
         <a href="docs/">Docs home</a>

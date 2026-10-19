@@ -33,8 +33,25 @@ $ echo $?
 1
 ```
 
-`renewhunt` (no subcommand) runs scan + clients + timers. Add `-system` to also walk `/etc/letsencrypt`, cron, and systemd unit dirs. Use `-json` for scripts. Exit `1` if any finding is **BLOCKED**.
+cert-manager hits come with a drop-in fix:
 
-Read-only. No network required for scan.
+```console
+RISKY  deploy/cert.yaml:15  renewBefore: 720h0m0s           renewBefore 720h (≈30.0d) is an absolute window…
+                            fix: renewBeforePercentage: 33  (cert-manager ≥ v1.16; or delete renewBefore …)
+```
+
+Check what your servers actually serve, not just what the config says:
+
+```console
+$ renewhunt live letsencrypt.org expired.badssl.com
+LIVE  hosts=2 worst=BLOCKED
+SEV      HOST                LIFETIME  USED  LEFT     ISSUER             REASON
+INFO     letsencrypt.org     90d       50%   45.5d    Let's Encrypt      90-day era certificate, fine today; …
+BLOCKED  expired.badssl.com  4d        100%  expired  COMODO CA Limited  certificate expired 4207.1d ago — …
+```
+
+`renewhunt` (no subcommand) runs scan + clients + timers; add `-check-live host1,host2` to include live probes. Add `-system` to also walk `/etc/letsencrypt`, cron, and systemd unit dirs. Use `-json` for scripts. Exit `1` if any finding is **BLOCKED**.
+
+Read-only. No network required for scan; `live` only connects to the hosts you name and never to a CA.
 
 See [GOAL.md](GOAL.md), [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.

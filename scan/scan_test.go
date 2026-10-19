@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -112,6 +113,58 @@ func TestMatchLineGoodPercentSkipped(t *testing.T) {
 	for _, f := range fs {
 		if f.Severity == Blocked {
 			t.Fatalf("unexpected BLOCKED on percentage: %#v", f)
+		}
+	}
+}
+
+func TestMatchLineGoDurationRenewBefore(t *testing.T) {
+	cases := []struct {
+		line string
+		want Severity
+	}{
+		{`  renewBefore: 720h0m0s`, Risky},
+		{`  renewBefore: "2160h"`, Blocked},
+		{`  renewBefore: 43200m`, Risky},
+		{`  renewBefore: 30d`, Risky},
+		{`  renewBefore: 360h`, OK},
+	}
+	for _, c := range cases {
+		fs := matchLine("c.yaml", 1, c.line)
+		if len(fs) != 1 {
+			t.Fatalf("%q: want 1 finding, got %#v", c.line, fs)
+		}
+		if fs[0].Severity != c.want {
+			t.Fatalf("%q: got %s want %s (%s)", c.line, fs[0].Severity, c.want, fs[0].Reason)
+		}
+		if c.want != OK && fs[0].Suggestion != "renewBeforePercentage: 33" {
+			t.Fatalf("%q: missing suggestion: %#v", c.line, fs[0])
+		}
+		if c.want == OK && fs[0].Suggestion != "" {
+			t.Fatalf("%q: OK finding should not carry a suggestion", c.line)
+		}
+	}
+}
+
+func TestClassifyPercent(t *testing.T) {
+	cases := []struct {
+		p    int
+		want Severity
+	}{
+		{0, Blocked}, {100, Blocked}, {10, Risky}, {33, OK}, {25, OK}, {60, Info},
+	}
+	for _, c := range cases {
+		fs := matchLine("c.yaml", 1, fmt.Sprintf("  renewBeforePercentage: %d", c.p))
+		if len(fs) != 1 || fs[0].Severity != c.want {
+			t.Fatalf("pct %d: got %#v want %s", c.p, fs, c.want)
+		}
+	}
+}
+
+func TestDurationHours(t *testing.T) {
+	for in, want := range map[string]int{"720h": 720, "720h0m0s": 720, "30d": 720, "1d12h": 36, "90m": 2} {
+		got, ok := durationHours(in)
+		if !ok || got != want {
+			t.Fatalf("%s: got %d,%v want %d", in, got, ok, want)
 		}
 	}
 }

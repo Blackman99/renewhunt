@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -32,6 +33,9 @@ type Finding struct {
 	Severity Severity `json:"severity"`
 	Reason   string   `json:"reason"`
 	Hint     string   `json:"hint,omitempty"`
+	// Suggestion is a drop-in replacement for the matched config, when one
+	// exists (e.g. cert-manager renewBeforePercentage).
+	Suggestion string `json:"suggestion,omitempty"`
 }
 
 // Result is the aggregate of a scan.
@@ -80,8 +84,9 @@ var patterns = []pattern{
 	{regexp.MustCompile(`(?i)renew.?before.?expiry\s*[=:]\s*(\d+)\s*(d|day|days)?\b`), "renew_before_days", 1},
 	{regexp.MustCompile(`(?i)renew_before_expiry\s*[=:]\s*(\d+)`), "renew_before_days", 1},
 	{regexp.MustCompile(`(?i)RENEW_DAYS\s*[=:]\s*(\d+)`), "renew_days_env", 1},
-	{regexp.MustCompile(`(?i)renewBefore:\s*(\d+)\s*h\b`), "renew_before_hours", 1},
-	{regexp.MustCompile(`(?i)renewBefore:\s*(\d+)\s*d\b`), "renew_before_days", 1},
+	// cert-manager renewBefore takes a Go duration: 720h, 720h0m0s, "2160h", 43200m …
+	{regexp.MustCompile(`(?i)renewBefore:\s*["']?((?:\d+(?:\.\d+)?(?:ms|h|m|s|d))+)["']?`), "renew_before_duration", 1},
+	{regexp.MustCompile(`(?i)renewBeforePercentage:\s*["']?(-?\d+)`), "renew_before_pct", 1},
 	{regexp.MustCompile(`(?i)--days(?:-until-expiry|-before)?\s+(\d+)`), "days_flag", 1},
 	{regexp.MustCompile(`(?i)--renew-before-expiry(?:-days)?\s+(\d+)`), "days_flag", 1},
 	{regexp.MustCompile(`(?i)certbot\s+renew[^\n]*--days\s+(\d+)`), "days_flag", 1},
@@ -243,14 +248,28 @@ func matchLine(path string, lineNo int, line string) []Finding {
 				continue
 			}
 			seen[key] = true
+			kind := p.kind
 			var n int
-			fmt.Sscanf(numStr, "%d", &n)
-			sev, reason, hint := classify(p.kind, n, line[m[0]:m[1]])
-			out = append(out, Finding{
+			if kind == "renew_before_duration" {
+				h, ok := durationHours(numStr)
+				if !ok {
+					continue
+				}
+				n, kind = h, "renew_before_hours"
+			} else {
+				fmt.Sscanf(numStr, "%d", &n)
+			}
+			sev, reason, hint := classify(kind, n, line[m[0]:m[1]])
+			f := Finding{
 				Path: path, Line: lineNo, Column: m[0] + 1,
-				Match: line[m[0]:m[1]], Context: strings.TrimSpace(line),
+				Match: strings.TrimSpace(line[m[0]:m[1]]), Context: strings.TrimSpace(line),
 				Severity: sev, Reason: reason, Hint: hint,
-			})
+			}
+			if kind == "renew_before_hours" && sev != OK {
+				f.Suggestion = "renewBeforePercentage: 33"
+				f.Hint = "Replace the absolute window with renewBeforePercentage: 33 (cert-manager ≥ v1.16) or delete renewBefore — the default renews with ⅓ of lifetime left, on any profile."
+			}
+			out = append(out, f)
 		}
 	}
 	// Standalone LE numbers only in renew context, and only if not already matched
@@ -323,6 +342,43 @@ func severityRank(s Severity) int {
 	}
 }
 
+// durationHours parses a cert-manager style duration (Go syntax, plus a
+// tolerated "d" suffix) and returns whole hours.
+func durationHours(v string) (int, bool) {
+	v = strings.TrimSpace(v)
+	var days float64
+	if i := strings.Index(v, "d"); i > 0 {
+		if _, err := fmt.Sscanf(v[:i], "%g", &days); err != nil {
+			return 0, false
+		}
+		v = v[i+1:]
+	}
+	var d time.Duration
+	if v != "" {
+		var err error
+		if d, err = time.ParseDuration(v); err != nil {
+			return 0, false
+		}
+	}
+	return int(days*24 + d.Hours() + 0.5), true
+}
+
+// classifyPercent judges cert-manager renewBeforePercentage: renew when p%
+// of the lifetime remains.
+func classifyPercent(p int) (Severity, string, string) {
+	at := func(life float64) float64 { return life * float64(100-p) / 100 }
+	switch {
+	case p <= 0 || p >= 100:
+		return Blocked, fmt.Sprintf("renewBeforePercentage %d is outside cert-manager's allowed range (0,100) — the Certificate is rejected", p), "Use renewBeforePercentage: 33 to renew at ⅔ of lifetime."
+	case p < 15:
+		return Risky, fmt.Sprintf("renewBeforePercentage %d renews with only %.1fd left on a 45-day cert (%.1fd on 64-day) — little room to retry a failed order", p, 45-at(45), 64-at(64)), "Use renewBeforePercentage: 33 to renew at ⅔ of lifetime."
+	case p > 50:
+		return Info, fmt.Sprintf("renewBeforePercentage %d renews early (day %.0f of 64, day %.0f of 45) — safe, but doubles ACME orders and rate-limit pressure", p, at(64), at(45)), ""
+	default:
+		return OK, fmt.Sprintf("renewBeforePercentage %d scales with lifetime: renews at day %.0f of 64, day %.0f of 45", p, at(64), at(45)), ""
+	}
+}
+
 // classify maps a numeric window to severity for LE 64-day (then 45-day) certs.
 // LE guidance: renew near ⅔ of lifetime ≈ day 43 for 64-day, ≈ day 30 for 45-day.
 func classify(kind string, n int, raw string) (Severity, string, string) {
@@ -340,6 +396,8 @@ func classify(kind string, n int, raw string) (Severity, string, string) {
 			return Risky, fmt.Sprintf("renewBefore %dh (≈%.1fd) is an absolute window; check against 45-day profile", n, days), hint
 		}
 		return OK, fmt.Sprintf("renewBefore %dh (≈%.1fd) is within short-lifetime margins", n, days), ""
+	case "renew_before_pct":
+		return classifyPercent(n)
 	case "renew_before_days", "days_flag", "renew_days_env":
 		return classifyDaysBeforeExpiry(n)
 	default:
