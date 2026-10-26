@@ -88,7 +88,7 @@ LIVE  hosts=2 worst=RISKY
 SEV    HOST                  LIFETIME  USED  LEFT   ISSUER         REASON
 OK     example.com           64d       31%   44.1d  Let's Encrypt  already on a 64-day-class certificate…
 RISKY  api.example.com:8443  90d       84%   14.4d  Let's Encrypt  past the ⅔ renewal point and still served…</pre>
-      <p>Config can look right while the server still serves a stale cert. <code>renewhunt live</code> (or <code>-check-live host,…</code> on the default run) reads each served leaf and checks lifetime, age, and whether renewal is landing near ⅔. It only talks to the hosts you name, never to a CA.</p>
+      <p>Config can look right while the server still serves a stale cert. <code>renewhunt live</code> (or <code>-check-live host,…</code> on the default run) reads each served leaf and checks lifetime, age, and whether renewal is landing near ⅔. It only talks to the hosts you name; add <code>-ari</code> and it also asks the issuing CA for its own suggested renewal window (RFC 9773), flagging a host that missed it or a window moved early by a revocation.</p>
     </div>
     <div class="panel">
       <h2>05 · Guidance</h2>

@@ -51,8 +51,25 @@ INFO     letsencrypt.org     90d       50%   45.5d    Let's Encrypt      90-day 
 BLOCKED  expired.badssl.com  4d        100%  expired  COMODO CA Limited  certificate expired 4207.1d ago — …
 ```
 
+Ask the CA itself when it wants each certificate renewed, via ARI (ACME Renewal Information, [RFC 9773](https://www.rfc-editor.org/rfc/rfc9773)):
+
+```console
+$ renewhunt live -ari letsencrypt.org valid-isrgrootx1.letsencrypt.org
+LIVE  hosts=2 worst=INFO
+SEV   HOST                              LIFETIME  USED  LEFT   ISSUER         REASON
+INFO  letsencrypt.org                   90d       57%   38.5d  Let's Encrypt  90-day era certificate, fine today; Let's Encrypt production moves to 64-day on 2027-02-10
+INFO  valid-isrgrootx1.letsencrypt.org  90d       5%    85.6d  Let's Encrypt  90-day era certificate, fine today; Let's Encrypt production moves to 64-day on 2027-02-10
+
+ARI   (renewal windows suggested by the issuing CA, RFC 9773)
+HOST                              CA             WINDOW (UTC)                         WHEN      NOTE
+letsencrypt.org                   Let's Encrypt  2026-11-02 17:18 – 2026-11-04 12:29  in 7.6d
+valid-isrgrootx1.letsencrypt.org  Let's Encrypt  2026-12-19 20:22 – 2026-12-21 15:33  in 54.7d
+```
+
+`-ari` adds two read-only GETs per host to the issuing CA (its ACME directory and the certificate's `renewalInfo`); no account, no key. Let's Encrypt (prod and staging), Google Trust Services and ZeroSSL are detected from the issuer; for any other ACME CA pass `-ari-directory https://…/directory`. A host still served after the CA's window closed is **RISKY**, and a window the CA moved early (usually a revocation) is **RISKY**, or **BLOCKED** once it has passed.
+
 `renewhunt` (no subcommand) runs scan + clients + timers; add `-check-live host1,host2` to include live probes. Add `-system` to also walk `/etc/letsencrypt`, cron, and systemd unit dirs. Use `-json` for scripts. Exit `1` if any finding is **BLOCKED**.
 
-Read-only. No network required for scan; `live` only connects to the hosts you name and never to a CA.
+Read-only. No network required for scan; `live` only connects to the hosts you name, and talks to a CA only when you add `-ari`.
 
 See [GOAL.md](GOAL.md), [ROADMAP.md](ROADMAP.md), [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.

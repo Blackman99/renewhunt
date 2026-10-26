@@ -42,6 +42,13 @@
 <li><strong>OK</strong> — already on a 64-day or shorter certificate and renewing on time</li>
 <li><strong>INFO</strong> — 90-day or longer certificate that is fine today</li>
 </ul>
+<h3>ARI (with <code>-ari</code>)</h3>
+<ul>
+<li><strong>BLOCKED</strong> — the CA moved the window early (before half the lifetime, usually a revocation) and that window has already passed</li>
+<li><strong>RISKY</strong> — still served after the CA's window closed, or an early window is open or coming up</li>
+<li><strong>INFO</strong> — inside the CA's normal window; an ARI-aware client renews now</li>
+<li>No ARI support, an unknown CA, or a lookup error is reported in the ARI table and never changes severity</li>
+</ul>
 <h3>cert-manager</h3>
 <ul>
 <li><code>renewBefore</code> accepts Go durations: <code>720h</code>, <code>720h0m0s</code> (kubectl export form), <code>43200m</code>, <code>"2160h"</code></li>

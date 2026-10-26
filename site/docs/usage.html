@@ -34,6 +34,7 @@ renewhunt scan [paths...]
 renewhunt scan -system          # also walk /etc/letsencrypt, cron, systemd
 renewhunt live example.com api.example.com:8443
 renewhunt -check-live example.com,api.example.com ./deploy
+renewhunt live -ari example.com
 renewhunt clients
 renewhunt timers
 renewhunt -json
@@ -46,6 +47,8 @@ renewhunt scan -json ./deploy</pre>
 #   fix: renewBeforePercentage: 33   (printed under each cert-manager hit)</pre>
 <h3>Live probe</h3>
 <p><code>renewhunt live host[:port]…</code> opens a TLS connection to each host you name (port 443 by default), reads the served leaf certificate, and reports lifetime, how much of it is used, days left, and issuer. A certificate still being served well past ⅔ of its lifetime means renewal is late, failing, or not reloaded by the server. Use <code>-timeout</code> to change the per-host timeout (default 10s). On the default command, <code>-check-live a.example,b.example</code> adds the same section to the combined report.</p>
+<h3>ARI window</h3>
+<p>Add <code>-ari</code> and renewhunt also asks the issuing CA when it wants that certificate renewed (ACME Renewal Information, RFC 9773). The ARI table shows the suggested window in UTC and whether it is days away, open now, or missed. Let's Encrypt, Google Trust Services and ZeroSSL are detected from the issuer; for other ACME CAs pass <code>-ari-directory https://…/directory</code>.</p>
 </div>
 <nav class="panel docs-nav">
   <a href="./">Docs</a>

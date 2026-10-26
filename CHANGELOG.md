@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Added
+- `renewhunt live -ari host…` (and `-ari` with `-check-live`) asks the issuing CA for each served certificate's ARI renewal window (RFC 9773) and prints an ARI table with the window and how far away it is. JSON results gain an `"ari"` object (`cert_id`, `ca`, `directory`, `window_start`, `window_end`, `explanation_url`, `retry_after`, `status`).
+- ARI judging: still served after the CA's window closed is RISKY; a window the CA moved before half the lifetime (usually a mass revocation) is RISKY, and BLOCKED once that window has passed.
+- CA detection from the issuer for Let's Encrypt (production and staging), Google Trust Services and ZeroSSL; `-ari-directory URL` points at any other ACME directory. ARI is off by default and is two unauthenticated, read-only GETs per host.
 - Homebrew install: `brew install Blackman99/tap/renewhunt` (macOS and Linux, amd64/arm64). Each release now updates `Formula/renewhunt.rb` in [Blackman99/homebrew-tap](https://github.com/Blackman99/homebrew-tap) automatically.
 
 ## v0.2.0 — 2026-10-19
