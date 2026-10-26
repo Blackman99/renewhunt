@@ -36,6 +36,9 @@ Flags:
   -system              also scan common system paths (/etc/letsencrypt, cron, systemd, ...)
   -check-live hosts    default command: also probe these hosts (comma-separated, repeatable)
   -timeout 10s         live probe timeout per host
+  -ari                 live: also ask the issuing CA for its ARI renewal window
+                       (two read-only GETs to the CA; off by default)
+  -ari-directory url   ACME directory to ask when the issuer is not auto-detected
   -version             print version
 
 Exit codes: 0 ok, 1 any BLOCKED finding, 2 usage or I/O error.
@@ -77,6 +80,12 @@ type common struct {
 	version bool
 	live    []string
 	timeout time.Duration
+	ari     bool
+	ariDir  string
+}
+
+func (c common) liveOpts() live.Options {
+	return live.Options{Timeout: c.timeout, ARI: c.ari || c.ariDir != "", ARIDirectory: c.ariDir}
 }
 
 func parseCommon(args []string, errw io.Writer) (common, error) {
@@ -90,6 +99,8 @@ func parseCommon(args []string, errw io.Writer) (common, error) {
 	fs.BoolVar(&c.version, "version", false, "print version")
 	fs.Var(&hosts, "check-live", "probe these hosts (comma-separated, repeatable)")
 	fs.DurationVar(&c.timeout, "timeout", 10*time.Second, "live probe timeout per host")
+	fs.BoolVar(&c.ari, "ari", false, "ask the issuing CA for its ARI renewal window")
+	fs.StringVar(&c.ariDir, "ari-directory", "", "ACME directory URL for ARI lookups")
 	if err := fs.Parse(args); err != nil {
 		return c, err
 	}
@@ -125,7 +136,7 @@ func cmdAll(args []string, out, errw io.Writer) int {
 	tres := timers.Probe()
 	var lres []live.Result
 	if len(c.live) > 0 {
-		lres = live.Probe(context.Background(), c.live, live.Options{Timeout: c.timeout})
+		lres = live.Probe(context.Background(), c.live, c.liveOpts())
 	}
 	if c.json {
 		doc := map[string]any{"scan": sres, "clients": cinfo, "timers": tres}
@@ -195,7 +206,7 @@ func cmdLive(args []string, out, errw io.Writer) int {
 		fmt.Fprintln(errw, "renewhunt live: name at least one host, e.g. renewhunt live example.com api.example.com:8443")
 		return 2
 	}
-	lres := live.Probe(context.Background(), targets, live.Options{Timeout: c.timeout})
+	lres := live.Probe(context.Background(), targets, c.liveOpts())
 	if c.json {
 		encode(out, lres)
 	} else {
@@ -296,6 +307,51 @@ func printLive(out io.Writer, rs []live.Result) {
 			used = "0%"
 		}
 		fmt.Fprintf(tw, "%s\t%s\t%.0fd\t%s\t%s\t%s\t%s\n", r.Severity, r.Target, r.LifetimeDays, used, left, truncate(r.IssuerOrg, 24), truncate(r.Reason, 100))
+	}
+	tw.Flush()
+	printARI(out, rs)
+}
+
+func printARI(out io.Writer, rs []live.Result) {
+	has := false
+	for _, r := range rs {
+		if r.ARI != nil {
+			has = true
+		}
+	}
+	if !has {
+		return
+	}
+	fmt.Fprintln(out)
+	fmt.Fprintln(out, "ARI   (renewal windows suggested by the issuing CA, RFC 9773)")
+	tw := tabwriter.NewWriter(out, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(tw, "HOST\tCA\tWINDOW (UTC)\tWHEN\tNOTE")
+	now := time.Now()
+	for _, r := range rs {
+		a := r.ARI
+		if a == nil {
+			continue
+		}
+		ca := a.CA
+		if ca == "" {
+			ca = "-"
+		}
+		window, when, note := "-", "-", a.Note
+		if a.Status == "window" {
+			window = a.WindowStart.Format("2006-01-02 15:04") + " – " + a.WindowEnd.Format("2006-01-02 15:04")
+			switch {
+			case now.After(a.WindowEnd):
+				when = "missed"
+			case !now.Before(a.WindowStart):
+				when = "renew now"
+			default:
+				when = fmt.Sprintf("in %.1fd", a.WindowStart.Sub(now).Hours()/24)
+			}
+			if a.ExplanationURL != "" {
+				note = a.ExplanationURL
+			}
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", r.Target, ca, window, when, truncate(note, 100))
 	}
 	tw.Flush()
 }

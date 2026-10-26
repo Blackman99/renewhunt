@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Blackman99/renewhunt/ari"
 )
 
 var t0 = time.Date(2026, 10, 19, 0, 0, 0, 0, time.UTC)
@@ -143,5 +145,52 @@ func TestProbeUnreachable(t *testing.T) {
 	r := Probe(context.Background(), []string{addr}, Options{Timeout: 2 * time.Second})[0]
 	if r.Severity != Blocked || r.Error == "" {
 		t.Fatalf("got %+v", r)
+	}
+}
+
+func TestApplyARI(t *testing.T) {
+	nb := t0.Add(-30 * day)
+	na := nb.Add(90 * day)
+	mk := func(start, end time.Time) Result {
+		r := Result{ChainValid: true}
+		fill(&r, nb, na, t0)
+		r.ARI = &ari.Info{Status: "window", WindowStart: start, WindowEnd: end, ExplanationURL: "https://example.test/incident"}
+		return r
+	}
+	cases := []struct {
+		name       string
+		start, end time.Time
+		want       Severity
+		reasonHas  string
+	}{
+		{"normal, ahead", nb.Add(60 * day), nb.Add(62 * day), Info, "90-day era"},
+		{"early window ahead (revocation)", nb.Add(35 * day), nb.Add(36 * day), Risky, "early"},
+		{"early window open", nb.Add(29 * day), nb.Add(31 * day), Risky, "renew now"},
+		{"early window missed", nb.Add(25 * day), nb.Add(26 * day), Blocked, "replace this certificate now"},
+	}
+	for _, c := range cases {
+		r := mk(c.start, c.end)
+		ApplyARI(&r, t0)
+		if r.Severity != c.want || !strings.Contains(r.Reason, c.reasonHas) {
+			t.Errorf("%s: got %s %q", c.name, r.Severity, r.Reason)
+		}
+	}
+	// A 64-day cert past its normal (late) ARI window: still served → RISKY.
+	nb2 := t0.Add(-46 * day)
+	r := Result{ChainValid: true}
+	fill(&r, nb2, nb2.Add(64*day), t0)
+	r.ARI = &ari.Info{Status: "window", WindowStart: nb2.Add(42 * day), WindowEnd: nb2.Add(44 * day)}
+	ApplyARI(&r, t0)
+	if r.Severity != Risky || !strings.Contains(r.Reason, "past the CA's ARI renewal window") {
+		t.Errorf("missed normal window: got %s %q", r.Severity, r.Reason)
+	}
+	// Non-window statuses never change severity.
+	r = Result{ChainValid: true}
+	fill(&r, nb, na, t0)
+	before := r.Severity
+	r.ARI = &ari.Info{Status: "unsupported"}
+	ApplyARI(&r, t0)
+	if r.Severity != before {
+		t.Errorf("unsupported changed severity to %s", r.Severity)
 	}
 }

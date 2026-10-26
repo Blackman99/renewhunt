@@ -2,8 +2,9 @@
 // whether their renewal timing still holds up as lifetimes shrink to
 // 64 and then 45 days.
 //
-// It only opens a TLS connection to the hosts given on the command line;
-// it never talks to an ACME CA.
+// It opens a TLS connection to the hosts given on the command line. Only
+// with Options.ARI does it also ask the issuing CA for its suggested renewal
+// window (two read-only GETs, see package ari).
 package live
 
 import (
@@ -13,8 +14,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strings"
 	"time"
+
+	"github.com/Blackman99/renewhunt/ari"
 )
 
 // Severity mirrors scan.Severity values so output stays uniform.
@@ -46,6 +50,7 @@ type Result struct {
 	ElapsedPct   float64   `json:"elapsed_pct,omitempty"`
 	ChainValid   bool      `json:"chain_valid"`
 	ChainError   string    `json:"chain_error,omitempty"`
+	ARI          *ari.Info `json:"ari,omitempty"`
 }
 
 // Options controls probing.
@@ -55,6 +60,12 @@ type Options struct {
 	Roots *x509.CertPool
 	// Now overrides the clock (tests).
 	Now func() time.Time
+	// ARI asks the issuing CA for its suggested renewal window (RFC 9773).
+	ARI bool
+	// ARIDirectory overrides issuer-based ACME directory detection.
+	ARIDirectory string
+	// ARIClient overrides the HTTP client used for ARI (tests).
+	ARIClient *http.Client
 }
 
 // ParseTargets splits comma-separated and repeated host arguments.
@@ -157,7 +168,63 @@ func probeOne(ctx context.Context, target string, opts Options) Result {
 		r.IssuerOrg = leaf.Issuer.CommonName
 	}
 	fill(&r, leaf.NotBefore, leaf.NotAfter, now())
+	if opts.ARI {
+		info := ari.Lookup(ctx, leaf, ari.Options{Directory: opts.ARIDirectory, Client: opts.ARIClient, Timeout: timeout})
+		r.ARI = &info
+		ApplyARI(&r, now())
+	}
 	return r
+}
+
+var rank = map[Severity]int{OK: 0, Info: 1, Risky: 2, Blocked: 3}
+
+// ApplyARI folds the CA's suggested renewal window into r.
+//
+// The CA knows things the dates alone don't: a mass revocation moves the
+// window forward, and a client that ignores ARI keeps serving a certificate
+// the CA has asked it to replace.
+func ApplyARI(r *Result, now time.Time) {
+	a := r.ARI
+	if a == nil || a.Status != "window" || r.RemainDays <= 0 {
+		return
+	}
+	life := r.NotAfter.Sub(r.NotBefore)
+	early := life > 0 && a.WindowStart.Before(r.NotBefore.Add(life/2))
+	var sev Severity
+	var why string
+	switch {
+	case now.After(a.WindowEnd):
+		sev = Risky
+		why = fmt.Sprintf("past the CA's ARI renewal window (ended %s) and still served — the client ignores ARI or renewal is failing", a.WindowEnd.Format("2006-01-02"))
+		if early {
+			sev = Blocked
+			why = "the CA asked for early replacement (window ended " + a.WindowEnd.Format("2006-01-02") + ") — likely a revocation; replace this certificate now"
+		}
+	case !now.Before(a.WindowStart):
+		sev = Info
+		why = "inside the CA's ARI renewal window — an ARI-aware client renews now"
+		if early {
+			sev = Risky
+			why = "the CA asked for early replacement (window opened " + a.WindowStart.Format("2006-01-02") + ") — likely a revocation; renew now"
+		}
+	default:
+		sev = OK
+		why = fmt.Sprintf("CA suggests renewing %s – %s", a.WindowStart.Format("2006-01-02"), a.WindowEnd.Format("2006-01-02"))
+		if early {
+			sev = Risky
+			why = "the CA moved this certificate's renewal window early (" + a.WindowStart.Format("2006-01-02") + ") — likely a revocation"
+		}
+	}
+	if a.ExplanationURL != "" && (sev == Risky || sev == Blocked) {
+		why += " (" + a.ExplanationURL + ")"
+	}
+	if rank[sev] > rank[r.Severity] {
+		r.Severity = sev
+		r.Reason = why + "; " + r.Reason
+		r.Hint = "Use an ARI-aware client (Certbot 4.1+, recent lego, cert-manager with ARI) so the CA's window drives renewal, then reload the server."
+	} else if sev != OK {
+		r.Reason += "; " + why
+	}
 }
 
 func issuerName(c *x509.Certificate) string {

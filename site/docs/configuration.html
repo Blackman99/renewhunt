@@ -35,9 +35,11 @@
 <li><code>-json</code> — machine-readable output</li>
 <li><code>-check-live hosts</code> — default command only: also probe these hosts (comma-separated, repeatable)</li>
 <li><code>-timeout 10s</code> — per-host timeout for live probes</li>
+<li><code>-ari</code> — live probes: also fetch the issuing CA's ARI renewal window (RFC 9773); off by default</li>
+<li><code>-ari-directory url</code> — ACME directory to use for ARI when the issuer is not Let's Encrypt, Google Trust Services or ZeroSSL (implies <code>-ari</code>)</li>
 <li><code>-version</code> — print version</li>
 </ul>
-<p>Scan is read-only and needs no network. Live probes only connect to the hosts you name, over TLS, and never contact an ACME CA. Client/timer probes shell out to <code>certbot</code>, <code>acme.sh</code>, <code>lego</code>, <code>kubectl</code>, <code>systemctl</code>, and <code>crontab</code> when present; missing tools are skipped with a note.</p>
+<p>Scan is read-only and needs no network. Live probes only connect to the hosts you name, over TLS, and contact an ACME CA only with <code>-ari</code>: two unauthenticated, read-only GETs (the directory and the certificate's <code>renewalInfo</code>). Client/timer probes shell out to <code>certbot</code>, <code>acme.sh</code>, <code>lego</code>, <code>kubectl</code>, <code>systemctl</code>, and <code>crontab</code> when present; missing tools are skipped with a note.</p>
 <p>Skipped directories include <code>.git</code>, <code>node_modules</code>, <code>vendor</code>, and similar. Only text-ish extensions and cron/Dockerfile/Makefile names are opened.</p>
 </div>
 <nav class="panel docs-nav">

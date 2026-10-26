@@ -44,6 +44,14 @@ echo "$out"
 [[ "$code" -eq 1 ]] || { echo "expected exit 1, got $code" >&2; exit 1; }
 echo "$out" | grep -q BLOCKED
 
+echo "== live -ari: unreachable host still BLOCKED, no ARI lookup without a cert (exit 1) =="
+set +e
+out="$("$BIN" live -ari -json -timeout 3s 127.0.0.1:1)"
+code=$?
+set -e
+[[ "$code" -eq 1 ]] || { echo "expected exit 1, got $code" >&2; exit 1; }
+if echo "$out" | grep -q '"ari"'; then echo "unexpected ari block for failed handshake" >&2; exit 1; fi
+
 echo "== default command with -check-live merges live section =="
 set +e
 all="$("$BIN" -json -check-live 127.0.0.1:1 "$ROOT/testdata/good")"

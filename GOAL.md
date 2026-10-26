@@ -4,4 +4,4 @@
 
 In scope: read-only scan of configs/scripts/cron/systemd for hardcoded renewal day windows (83/80/60/30 and common renew-before patterns), classification against LE's 64-day and 45-day profiles, optional ACME client version probes, systemd timer / crontab listing, human + JSON output.
 
-Out of scope: renewing certificates, talking to ACME CAs at runtime (live expiry probe is roadmap), rewriting configs for you, general TLS endpoint consistency (that is certfan), certificate issuance.
+Out of scope: renewing certificates, talking to ACME CAs at runtime beyond the opt-in, read-only ARI `renewalInfo` lookup (`-ari`), rewriting configs for you, general TLS endpoint consistency (that is certfan), certificate issuance.
