@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.3.0 — 2026-10-26
 
 ### Added
 - `renewhunt live -ari host…` (and `-ari` with `-check-live`) asks the issuing CA for each served certificate's ARI renewal window (RFC 9773) and prints an ARI table with the window and how far away it is. JSON results gain an `"ari"` object (`cert_id`, `ca`, `directory`, `window_start`, `window_end`, `explanation_url`, `retry_after`, `status`).

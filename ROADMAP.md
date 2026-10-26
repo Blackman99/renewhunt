@@ -15,11 +15,11 @@
 - Suggest `renewBeforePercentage: 33` for cert-manager `renewBefore` hits; classify existing `renewBeforePercentage`
 - Parse cert-manager Go durations (`720h0m0s`, `43200m`, quoted values)
 
-## v0.2.x
+## v0.3 (shipped 2026-10-26)
 
 - ✅ Homebrew formula — `brew install Blackman99/tap/renewhunt`, auto-updated on each release
-
-## v0.3
-
 - ✅ ARI (ACME Renewal Information, RFC 9773) probe — `renewhunt live -ari host…` shows the CA's suggested renewal window and flags missed or revocation-driven early windows
+
+## v0.4
+
 - Richer cert-manager / Traefik / Caddy config parsers
